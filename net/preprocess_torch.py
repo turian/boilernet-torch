@@ -9,7 +9,7 @@ from collections import defaultdict
 
 import nltk
 import numpy as np
-import tensorflow as tf
+import torch
 from bs4 import BeautifulSoup, NavigableString
 from tqdm import tqdm
 
@@ -107,32 +107,27 @@ def get_vocabulary(d, num=None):
 
 
 def get_doc_inputs(docs, word_map, tag_map):
-    """Transform "docs" into the input format accepted by the classifier."""
-
-    def _int64_feature(l):
-        """Return an int64_list."""
-        return tf.train.Feature(int64_list=tf.train.Int64List(value=l))
-
+    """
+    Transform "docs" into the input format accepted by the classifier.
+    """
     for doc in docs:
         doc_features = []
         doc_labels = []
+        
         for words_dict, tags_dict, label in doc:
             feature_vector = get_feature_vector(words_dict, tags_dict, word_map, tag_map)
-            doc_features.append(_int64_feature(feature_vector))
-            doc_labels.append(_int64_feature([label]))
-        doc_feature_list = tf.train.FeatureList(feature=doc_features)
-        doc_label_list = tf.train.FeatureList(feature=doc_labels)
-        yield doc_feature_list, doc_label_list
+            doc_features.append(torch.tensor(feature_vector).long())
+            doc_labels.append(torch.tensor([label]).long())
+
+        yield torch.stack(doc_features), torch.stack(doc_labels)
 
 
-def write_tfrecords(filename, dataset, word_map, tag_map):
-    """Write the dataset to a .tfrecords file."""
-    with tf.io.TFRecordWriter(filename) as writer:
-        for doc_feature_list, doc_label_list in get_doc_inputs(dataset, word_map, tag_map):
-            f = {'doc_feature_list': doc_feature_list, 'doc_label_list': doc_label_list}
-            feature_lists = tf.train.FeatureLists(feature_list=f)
-            example = tf.train.SequenceExample(feature_lists=feature_lists)
-            writer.write(example.SerializeToString())
+def write_ptfile(filename, dataset, word_map, tag_map):
+    """
+    Write the dataset to a .pt file.
+    """
+    processed_data = list(get_doc_inputs(dataset, word_map, tag_map))
+    torch.save(processed_data, filename)
 
 
 def save(save_path, word_map, tag_map, train_set, dev_set=None, test_set=None):
@@ -149,21 +144,21 @@ def save(save_path, word_map, tag_map, train_set, dev_set=None, test_set=None):
     info['num_words'] = len(word_map)
     info['num_tags'] = len(tag_map)
 
-    train_file = os.path.join(save_path, 'train.tfrecords')
+    train_file = os.path.join(save_path, 'train.pt')
     print('writing {}...'.format(train_file))
-    write_tfrecords(train_file, train_set, word_map, tag_map)
+    write_ptfile(train_file, train_set, word_map, tag_map)
     info['num_train_examples'] = len(train_set)
 
     if dev_set is not None:
-        dev_file = os.path.join(save_path, 'dev.tfrecords')
+        dev_file = os.path.join(save_path, 'dev.pt')
         print('writing {}...'.format(dev_file))
-        write_tfrecords(dev_file, dev_set, word_map, tag_map)
+        write_ptfile(dev_file, dev_set, word_map, tag_map)
         info['num_dev_examples'] = len(dev_set)
 
     if test_set is not None:
-        test_file = os.path.join(save_path, 'test.tfrecords')
+        test_file = os.path.join(save_path, 'test.pt')
         print('writing {}...'.format(test_file))
-        write_tfrecords(test_file, test_set, word_map, tag_map)
+        write_ptfile(test_file, test_set, word_map, tag_map)
         info['num_test_examples'] = len(test_set)
 
     info_file = os.path.join(save_path, 'info.pkl')

@@ -41,7 +41,7 @@ def get_class_weights(train_set_file):
     y_train = []
     for _, y in get_dataset(train_set_file, 1, False):
         y_train.extend(y.numpy().flatten())
-    return class_weight.compute_class_weight('balanced', [0, 1], y_train)
+    return class_weight.compute_class_weight(class_weight='balanced', classes=[0, 1], y=y_train)
 
 
 def main():
