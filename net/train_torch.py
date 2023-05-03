@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import argparse
+import json
 import csv
 import math
 import os
@@ -39,9 +40,6 @@ def repeat_seed(worker_id):
     worker_seed = torch.initial_seed() % (2**32 - 1)
     torch.manual_seed(worker_seed)
     np.random.seed(worker_seed)
-
-
-
 
 def _read_example(example):
     return {
@@ -94,6 +92,8 @@ def main():
     )
     args = ap.parse_args()
 
+    assert args.batch_size == 1, "Collation not enabled, use -b 1"
+
     info_file = os.path.join(args.DATA_DIR, "info.pkl")
     with open(info_file, "rb") as fp:
         info = pickle.load(fp)
@@ -137,7 +137,12 @@ def main():
         for arg in vars(args):
             writer.writerow([arg, getattr(args, arg)])
 
-    clf.train(
+    kwargs_file = os.path.join(args.working_dir, "kwargs.json")
+    print("writing {}...".format(kwargs_file))
+    with open(kwargs_file, "w") as fp:
+        json.dump(kwargs, fp)
+
+    clf.do_train(
         train_dataset=train_dataset,
         train_steps=train_steps,
         epochs=args.epochs,

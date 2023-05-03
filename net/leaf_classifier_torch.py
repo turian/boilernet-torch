@@ -79,7 +79,7 @@ class LeafClassifier(nn.Module):
         x = self.sigmoid(x)
         return x
 
-    def train(self, train_dataset, train_steps, epochs, optimizer, loss_function, log_file=None, ckpt=None, class_weight=None, dev_dataset=None, dev_steps=None,
+    def do_train(self, train_dataset, train_steps, epochs, optimizer, loss_function, log_file=None, ckpt=None, class_weight=None, dev_dataset=None, dev_steps=None,
               test_dataset=None, test_steps=None, interval=1):
         """Train a number of input sequences."""
         metrics_dev = None

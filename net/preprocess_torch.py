@@ -143,6 +143,8 @@ def save(save_path, word_map, tag_map, train_set, dev_set=None, test_set=None):
     info = {}
     info['num_words'] = len(word_map)
     info['num_tags'] = len(tag_map)
+    info['word_map'] = word_map
+    info['tag_map'] = tag_map
 
     train_file = os.path.join(save_path, 'train.pt')
     print('writing {}...'.format(train_file))
